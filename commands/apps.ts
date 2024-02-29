@@ -23,10 +23,11 @@ const command: Command = {
         if (!app) return int.editReply({ embeds: [{ color: 0xFFFF00, description: `⚠️ | Aplicação não encontrada!` }] })
 
         const status = await app.getStatus();
-        const message_data = build_message(app, status);
+        const logs = await Promise.race([app.getLogs(), new Promise(r => setTimeout(r.bind(null, ""), 2000))]).catch(() => "") as string;
+        const message_data = build_message(app, status, logs, Date.now());
         const message = await int.editReply(message_data)
 
-        client.interactions.set(message.id, { app, status, author_id: int.user.id, created_in: Date.now() })
+        client.interactions.set(message.id, { app, status, logs, author_id: int.user.id, created_in: Date.now() })
 
     },
     auto_complete: async (client, int) => {
