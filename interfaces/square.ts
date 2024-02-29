@@ -18,7 +18,8 @@ export interface Application {
             total: string
         }
     },
-    logs: string
+    logs: string,
+    backup_url?: string
 }
 
 const languages = {
