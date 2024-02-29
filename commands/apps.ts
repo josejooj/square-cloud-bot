@@ -1,4 +1,5 @@
 import { Command } from '../interfaces/discord'
+import build_message from '../tasks/manage_app/build_message';
 
 const command: Command = {
     data: {
@@ -8,10 +9,24 @@ const command: Command = {
             type: 3,
             name: "app",
             description: "Aplicação que você deseja gerenciar",
-            autocomplete: true
+            autocomplete: true,
+            required: true
         }]
     },
     handler: async (client, int) => {
+
+        await int.deferReply();
+
+        const app_id = int.options.getString("app");
+        const app = await client.square_api.applications.get(app_id || "").catch(() => { });
+
+        if (!app) return int.editReply({ embeds: [{ color: 0xFFFF00, description: `⚠️ | Aplicação não encontrada!` }] })
+
+        const status = await app.getStatus();
+        const message_data = build_message(app, status);
+        const message = await int.editReply(message_data)
+
+        client.interactions.set(message.id, { app, status, author_id: int.user.id, created_in: Date.now() })
 
     },
     auto_complete: async (client, int) => {
@@ -24,7 +39,7 @@ const command: Command = {
 
         const text = int.options.getFocused();
         const values = []
-        
+
         for (const app of applications.toJSON()) {
 
             values.push({
