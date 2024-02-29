@@ -23,8 +23,8 @@ const ReadDirectory = <T>(path: string) => {
 
 class CustomClient extends Client<true> {
 
-    commands: Command[] = ReadDirectory<Command>('commands')
-    tasks: Task[] = ReadDirectory<Task>('tasks')
+    commands: Record<string, Command> = Object.fromEntries(ReadDirectory<Command>('commands').map(x => [x.data.name, x]));
+    tasks: Record<string, Task> = Object.fromEntries(ReadDirectory<Task>('tasks').filter(x => x?.name).map(x => [x.name, x]))
     interactions = new YamlDatabase<{ author_id: string, created_in: number } & Record<string, any>>({ databasePath: "./database/interactions" });
     general_db = new YamlDatabase<{ slash_send: boolean }>({ databasePath: "./database/config" });
     square_api = new SquareCloudAPI(process.env.SQUARE_CLOUD_API_KEY!)
@@ -50,15 +50,18 @@ class CustomClient extends Client<true> {
 
         try {
 
-            if (this.last_applications_load - (1000 * 30) > Date.now()) {
+            if (Date.now() > this.last_applications_load + (1000 * 30)) {
 
                 const { applications } = await this.square_api.users.get();
 
                 if (this.last_applications_load === 0) console.log(`\x1b[36m${applications.size} aplicações\x1b[32m da Square Cloud carregadas com sucesso!\x1b[0m`);
 
                 this.last_applications_load_data = applications
+                this.last_applications_load = Date.now()
 
-            } else return this.last_applications_load_data
+            } 
+            
+            return this.last_applications_load_data
 
         } catch (e: any) {
 
@@ -71,7 +74,7 @@ class CustomClient extends Client<true> {
             process.exit(1);
 
         };
-        
+
     }
 
     private async registerSlash() {
@@ -79,7 +82,7 @@ class CustomClient extends Client<true> {
         if (process.env.DEVELOPMENT_GUILD_ID) {
 
             const guild = await this.guilds.fetch(process.env.DEVELOPMENT_GUILD_ID);
-            const commands = this.commands.map(x => x.data);
+            const commands = Object.values(this.commands).map(x => x.data);
 
             await guild.commands.set(commands)
             await this.application.commands.set([])
@@ -87,7 +90,7 @@ class CustomClient extends Client<true> {
         } else {
 
             const data = this.general_db.get("config");
-            const commands = this.commands.map(x => x.data);
+            const commands = Object.values(this.commands).map(x => x.data);
 
             if (!data.slash_send) {
 
