@@ -1,4 +1,5 @@
 import { Command } from '../interfaces/discord'
+import { get_application } from '../interfaces/square';
 import build_message from '../tasks/manage_app/build_message';
 
 const command: Command = {
@@ -18,16 +19,14 @@ const command: Command = {
         await int.deferReply();
 
         const app_id = int.options.getString("app");
-        const app = await client.square_api.applications.get(app_id || "").catch(() => { });
+        const app = await get_application(app_id || "", client)
 
         if (!app) return int.editReply({ embeds: [{ color: 0xFFFF00, description: `⚠️ | Aplicação não encontrada!` }] })
 
-        const status = await app.getStatus();
-        const logs = await Promise.race([app.getLogs(), new Promise(r => setTimeout(r.bind(null, ""), 2000))]).catch(() => "") as string;
-        const message_data = build_message(app, status, logs, Date.now());
+        const message_data = build_message(app, Date.now());
         const message = await int.editReply(message_data)
 
-        client.interactions.set(message.id, { app, status, logs, author_id: int.user.id, created_in: Date.now() })
+        client.interactions.set(message.id, { app, author_id: int.user.id, created_in: Date.now() })
 
     },
     auto_complete: async (client, int) => {
